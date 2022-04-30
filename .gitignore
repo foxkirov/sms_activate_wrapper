@@ -1,3 +1,6 @@
 venv/
 .idea
 tests/
+build/
+dist/
+pysmsactivate.egg-info/
