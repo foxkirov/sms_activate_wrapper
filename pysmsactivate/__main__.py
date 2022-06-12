@@ -4,7 +4,12 @@ from pysmsactivate.errors import *
 
 
 class Activation(object):
-    def __init__(self, api_key: str, country: int, service: str = "tg", debug: bool = False):
+    def __init__(self, api_key: str,
+                 country: int,
+                 service: str = "tg",
+                 debug: bool = False,
+                 api_url: str = None):
+
         self.sa = SMSActivateAPI(api_key)
         self.sa.debug_mode = debug
         self.country = country
@@ -12,27 +17,14 @@ class Activation(object):
         self.debug = debug
         self.number = None
         self.activation_id = None
-
-    def errors_interceptor(self, response: dict):
-
-        if isinstance(response, dict) and 'error' in response.keys():
-            if response['error'] == "NO_NUMBERS":
-                raise NoNumbersError(text=response)
-
-            elif 'message' in response.keys() and response['message'] == 'Server error, try again':
-                raise ServerError
-
-            else:
-                if self.debug:
-                    print(response)
-                raise UnknownError(text=response['error'], message=response['message'])
-        else:
-            return response
+        if api_url:
+            self.sa.__api_url = api_url
 
     def get_numbers_count(self):
         response = self.sa.getNumbersStatus(country=self.country)
+
         if self.debug:
-            print(response[f"{self.service}_0"])
+            print(response[f"{self.service}"])
 
         return response
 
@@ -43,7 +35,7 @@ class Activation(object):
 
             activation = self.sa.getNumber(service=self.service,
                                            country=self.country,
-                                           forward=False)  # {'activation_id': 000000000, 'phone': 79999999999}
+                                           forward=False)
 
             if self.debug:
                 print(activation)
@@ -58,6 +50,7 @@ class Activation(object):
                     raise e
             else:
                 break
+
         self.number = activation["phone"]
         self.activation_id = activation["activation_id"]
 
@@ -66,14 +59,18 @@ class Activation(object):
     def wait_code(self, timeout: int):
         self.errors_interceptor(self.sa.setStatus(id=self.activation_id, status=1))
         i = 0
+
         while i < timeout:
             i += 1
             sleep(1)
             try:
                 status = self.errors_interceptor(self.sa.getStatus(id=self.activation_id))
+
             except ServerError:
                 continue
+
             st = self.sa.activationStatus(status)
+
             if self.debug:
                 print(st)
 
@@ -89,3 +86,63 @@ class Activation(object):
     def close(self):
         response = self.errors_interceptor(self.sa.setStatus(id=self.activation_id, status=6))
         return response
+
+    def get_balance(self) -> float:
+        response = self.errors_interceptor(self.sa.getBalance())
+        return float(response['balance'])
+
+    def errors_interceptor(self, response: dict):
+
+        if isinstance(response, dict) and 'error' in response.keys():
+            if response['error'] == "NO_NUMBERS":
+                raise NoNumbersError
+
+            elif response['error'] == "NO_BALANCE":
+                raise NoBalanseError
+
+            elif response['error'] == "BAD_ACTION":
+                raise BadActionError
+
+            elif response['error'] == "BAD_SERVICE":
+                raise BadServiceError
+
+            elif response['error'] == "BAD_KEY":
+                raise BadKeyError
+
+            elif response['error'] == "ERROR_SQL":
+                raise SqlError
+
+            elif response['error'] == "NO_ACTIVATION":
+                raise NoActivationError
+
+            elif response['error'] == "BAD_STATUS":
+                raise BadStatusError
+
+            elif response['error'] == "STATUS_CANCEL":
+                raise StatusCancelError
+
+            elif response['error'] == "BANNED":
+                raise BannedError
+
+            elif response['error'] == "NO_CONNECTION":
+                raise NoConnectionError
+
+            elif response['error'] == "ACCOUNT_INACTIVE":
+                raise AccountInactiveError
+
+            elif response['error'] == "NO_ID_RENT":
+                raise NoIdRentError
+
+            elif response['error'] == "INVALID_PHONE":
+                raise InvalidPhoneError
+
+            elif response['error'] == "INCORRECT_STATUS":
+                raise StatusIncorrectError
+
+            else:
+                if self.debug:
+                    print(response)
+                raise UnknownError(text=response['error'], message=response['message'])
+
+        else:
+            return response
