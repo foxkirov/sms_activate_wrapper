@@ -119,8 +119,3 @@ class StatusCanNotCancelError(Exception):
         self.message = "Unable to cancel the lease (more than 20 minutes have passed)"
 
 
-class StatusCanNotCancelError(Exception):
-    def __init__(self, *args, **kwargs):
-        self.txt = "CANT_CANCEL"
-        self.message = "Unable to cancel the lease (more than 20 minutes have passed)"
-
