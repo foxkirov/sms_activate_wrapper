@@ -80,7 +80,7 @@ class Activation(object):
         raise TimeoutError("timeout error")
 
     def cancel(self):
-        response = self.errors_interceptor(self.sa.setStatus(id=self.activation_id, status=6))
+        response = self.errors_interceptor(self.sa.setStatus(id=self.activation_id, status=8))
         return response
 
     def close(self):
